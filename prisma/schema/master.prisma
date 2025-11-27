@@ -1,21 +1,23 @@
 // Master data models
 
 model Designation {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("DesignationCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model JobType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("JobTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Qualification {
@@ -26,127 +28,182 @@ model Qualification {
   city          String
   subDepartment String?
   status        String   @default("active")
+  createdById   String?
+  createdBy     User?    @relation("QualificationCreatedBy", fields: [createdById], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
 model MaritalStatus {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("MaritalStatusCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model DegreeType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("DegreeTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model City {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  province  String?
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  province    String?
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("CityCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Branch {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  address   String?
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  address     String?
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("BranchCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model AllowanceHead {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("AllowanceHeadCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model DeductionHead {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("DeductionHeadCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model LoanType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("LoanTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model LeaveType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("LeaveTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model LeavesPolicy {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  details   String?
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  details     String?
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("LeavesPolicyCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Equipment {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("EquipmentCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model SalaryBreakup {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  details   String?
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  details     String?
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("SalaryBreakupCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model TaxSlab {
-  id        String   @id @default(uuid())
-  name      String
-  minAmount Decimal
-  maxAmount Decimal
-  rate      Decimal
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  minAmount   Decimal
+  maxAmount   Decimal
+  rate        Decimal
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("TaxSlabCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model BonusType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("BonusTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model ApprovalSetting {
-  id        String   @id @default(uuid())
-  name      String
-  levels    Int      @default(1)
-  details   String?
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  levels      Int      @default(1)
+  details     String?
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("ApprovalSettingCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Department related models
+
+model Department {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  createdById    String?
+  createdBy      User?           @relation("DepartmentCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  subDepartments SubDepartment[]
+}
+
+model SubDepartment {
+  id           String     @id @default(uuid())
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdById  String?
+  createdBy    User?      @relation("SubDepartmentCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([name, departmentId])
 }

@@ -26,8 +26,13 @@ export const createDepartment = async (req, res) => {
   if (!name?.trim()) {
     return res.status(400).json({ status: false, message: 'Name is required' });
   }
+  let createdBy = null;
+  if (req.user?.userId) {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { firstName: true, lastName: true } });
+    if (user) createdBy = `${user.firstName} ${user.lastName || ''}`.trim();
+  }
   const department = await prisma.department.create({
-    data: { name: name.trim() },
+    data: { name: name.trim(), createdBy },
   });
   res.status(201).json({ status: true, data: department, message: 'Department created successfully' });
 };
@@ -41,8 +46,13 @@ export const createDepartmentsBulk = async (req, res) => {
   if (!validNames.length) {
     return res.status(400).json({ status: false, message: 'At least one valid name is required' });
   }
+  let createdBy = null;
+  if (req.user?.userId) {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { firstName: true, lastName: true } });
+    if (user) createdBy = `${user.firstName} ${user.lastName || ''}`.trim();
+  }
   const result = await prisma.department.createMany({
-    data: validNames.map(name => ({ name })),
+    data: validNames.map(name => ({ name, createdBy })),
     skipDuplicates: true,
   });
   res.status(201).json({ status: true, data: result, message: `${result.count} department(s) created successfully` });
@@ -128,10 +138,16 @@ export const createSubDepartment = async (req, res) => {
   if (!departmentId) {
     return res.status(400).json({ status: false, message: 'Department is required' });
   }
+  let createdBy = null;
+  if (req.user?.userId) {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { firstName: true, lastName: true } });
+    if (user) createdBy = `${user.firstName} ${user.lastName || ''}`.trim();
+  }
   const subDepartment = await prisma.subDepartment.create({
     data: { 
       name: name.trim(), 
-      departmentId 
+      departmentId,
+      createdBy
     },
     include: { department: true },
   });
@@ -147,8 +163,13 @@ export const createSubDepartmentsBulk = async (req, res) => {
   if (!validItems.length) {
     return res.status(400).json({ status: false, message: 'At least one valid sub-department is required' });
   }
+  let createdBy = null;
+  if (req.user?.userId) {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { firstName: true, lastName: true } });
+    if (user) createdBy = `${user.firstName} ${user.lastName || ''}`.trim();
+  }
   const result = await prisma.subDepartment.createMany({
-    data: validItems.map(i => ({ name: i.name.trim(), departmentId: i.departmentId })),
+    data: validItems.map(i => ({ name: i.name.trim(), departmentId: i.departmentId, createdBy })),
     skipDuplicates: true,
   });
   res.status(201).json({ status: true, data: result, message: `${result.count} sub-department(s) created successfully` });
