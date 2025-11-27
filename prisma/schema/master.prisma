@@ -200,6 +200,7 @@ model ApprovalSetting {
   updatedAt   DateTime @updatedAt
 }
 
+
 // Department related models
 
 model Department {
