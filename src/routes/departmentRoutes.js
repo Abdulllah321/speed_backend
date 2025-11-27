@@ -18,7 +18,6 @@ import {
   deleteSubDepartment,
   deleteSubDepartmentsBulk,
 } from '@/controllers/departmentController.js';
-import { authenticate } from '@/middleware/authMiddleware.js';
 
 const router = express.Router();
 

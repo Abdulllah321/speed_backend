@@ -128,13 +128,13 @@ export const login = async (req, res) => {
     // Generate tokens
     const { accessToken, refreshToken, family } = generateTokens(user);
 
-    // Store refresh token
+    // Store refresh token (1 day session)
     await prisma.refreshToken.create({
       data: {
         userId: user.id,
         token: refreshToken,
         family,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day
       },
     });
 
@@ -216,7 +216,7 @@ export const refreshToken = async (req, res) => {
         userId: user.id,
         token: newRefreshToken,
         family,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day
       },
     });
 

@@ -2,8 +2,8 @@ export default {
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'your-super-secret-access-key-change-in-production',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-in-production',
-    accessExpiresIn: '1h',
-    refreshExpiresIn: '7d',
+    accessExpiresIn: '15m', // Short-lived access token
+    refreshExpiresIn: '1d', // 1 day session via refresh token
     issuer: 'speed-limit-app',
   },
   password: {
