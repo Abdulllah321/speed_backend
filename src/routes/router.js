@@ -1,6 +1,9 @@
 import express from 'express';
+import departmentRoutes from './departmentRoutes.js';
+
 const router = express.Router();
 
-// You can require and use your routes here ;)
+// API routes
+router.use('/api', departmentRoutes);
 
 export default router;
