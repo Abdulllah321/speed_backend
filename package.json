@@ -5,9 +5,15 @@
     "description": "speed_limit_backend is the ultimate backend solution",
     "main": "src/server.js",
     "scripts": {
-        "dev": "node --import ./register.js src/server.js --watch",
+        "dev": "nodemon --import ./register.js src/server.js --watch",
         "setup": "bun install && bun update",
-        "start": "node --import ./register.js src/server.js"
+        "start": "node --import ./register.js src/server.js",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "prisma migrate dev",
+        "prisma:studio": "prisma studio",
+        "prisma:push": "prisma db push",
+        "prisma:seed": "prisma db seed",
+        "prisma:deploy": "prisma generate && prisma migrate dev && prisma db push"
     },
     "keywords": [
         "express",
@@ -19,23 +25,30 @@
         "@prisma/adapter-pg": "^7.0.1",
         "@prisma/client": "7",
         "@types/cors": "^2.8.19",
+        "bcrypt": "^6.0.0",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
         "express": "^4.21.2",
         "express-custom-error": "^1.9.4",
+        "express-rate-limit": "^8.2.1",
         "has-keys": "^0.1.0",
         "helmet": "^3.23.3",
         "http-status": "^1.8.1",
         "i": "^0.3.7",
+        "jsonwebtoken": "^9.0.2",
         "mandatoryenv": "^1.1.6",
         "module-alias": "^2.2.3",
         "morgan": "^1.10.1",
+        "nodemailer": "^7.0.11",
         "nodemon": "^3.1.11",
         "pg": "^8.16.3",
-        "rotating-file-stream": "^1.4.6"
+        "qrcode": "^1.5.4",
+        "rotating-file-stream": "^1.4.6",
+        "speakeasy": "^2.0.0"
     },
     "devDependencies": {
+        "@types/node": "^24.10.1",
         "prisma": "7"
     },
     "_moduleAliases": {
@@ -46,11 +59,7 @@
         "@routes": "src/routes"
     },
     "imports": {
-        "#controllers/*": "./src/controllers/*",
-        "#models/*": "./src/models/*",
-        "#util/*": "./src/util/*",
-        "#routes/*": "./src/routes/*",
-        "#*": "./src/*"
-    },
+        "@/*": "./src/*"
+      },
     "dependencies_note": "tsx is used for @ alias support"
 }
