@@ -54,15 +54,29 @@ model DegreeType {
   updatedAt   DateTime @updatedAt
 }
 
+model Country {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String?  @unique
+  cities    City[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model City {
   id          String   @id @default(uuid())
-  name        String   @unique
-  province    String?
+  name        String
+  lat         Float?
+  lng         Float?
+  countryId   String?
+  country     Country? @relation(fields: [countryId], references: [id], onDelete: SetNull)
   status      String   @default("active")
   createdById String?
   createdBy   User?    @relation("CityCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([name, countryId])
 }
 
 model Branch {
@@ -207,4 +221,16 @@ model SubDepartment {
   updatedAt    DateTime   @updatedAt
 
   @@unique([name, departmentId])
+}
+
+model EOBI {
+  id          String   @id @default(uuid())
+  name        String
+  amount      Decimal
+  yearMonth   String
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("EOBICreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

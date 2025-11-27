@@ -41,6 +41,7 @@ model User {
   leaveTypesCreated        LeaveType[]        @relation("LeaveTypeCreatedBy")
   leavesPoliciesCreated    LeavesPolicy[]     @relation("LeavesPolicyCreatedBy")
   equipmentsCreated        Equipment[]        @relation("EquipmentCreatedBy")
+  eobisCreated             EOBI[]             @relation("EOBICreatedBy")
   salaryBreakupsCreated    SalaryBreakup[]    @relation("SalaryBreakupCreatedBy")
   taxSlabsCreated          TaxSlab[]          @relation("TaxSlabCreatedBy")
   bonusTypesCreated        BonusType[]        @relation("BonusTypeCreatedBy")
