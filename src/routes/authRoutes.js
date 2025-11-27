@@ -9,6 +9,9 @@ const router = Router();
 router.post('/login', loginLimiter, authController.login);
 router.post('/refresh-token', authController.refreshToken);
 
+// Session check (lightweight endpoint for polling)
+router.get('/check-session', authenticate, authController.checkSession);
+
 // Protected routes
 router.use(authenticate);
 

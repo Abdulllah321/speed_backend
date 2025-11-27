@@ -309,6 +309,11 @@ export const changePassword = async (req, res) => {
   }
 };
 
+// Lightweight session check for polling
+export const checkSession = async (req, res) => {
+  res.json({ status: true, valid: true });
+};
+
 export const getMe = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({

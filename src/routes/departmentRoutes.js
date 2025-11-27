@@ -17,8 +17,12 @@ import {
   deleteSubDepartment,
   deleteSubDepartmentsBulk,
 } from '@/controllers/departmentController.js';
+import { authenticate } from '@/middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// All routes require authentication
+router.use(authenticate);
 
 // Department routes
 router.get('/departments', getAllDepartments);
