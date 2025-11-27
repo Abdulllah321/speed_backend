@@ -1,4 +1,5 @@
 import express from 'express';
+import { authenticate } from '@/middleware/authMiddleware.js';
 import {
   getAllDepartments,
   getDepartmentById,
@@ -23,22 +24,22 @@ const router = express.Router();
 // Department routes
 router.get('/departments', getAllDepartments);
 router.get('/departments/:id', getDepartmentById);
-router.post('/departments', createDepartment);
-router.post('/departments/bulk', createDepartmentsBulk);
-router.put('/departments/bulk', updateDepartmentsBulk);
-router.put('/departments/:id', updateDepartment);
-router.delete('/departments/bulk', deleteDepartmentsBulk);
-router.delete('/departments/:id', deleteDepartment);
+router.post('/departments', authenticate, createDepartment);
+router.post('/departments/bulk', authenticate, createDepartmentsBulk);
+router.put('/departments/bulk', authenticate, updateDepartmentsBulk);
+router.put('/departments/:id', authenticate, updateDepartment);
+router.delete('/departments/bulk', authenticate, deleteDepartmentsBulk);
+router.delete('/departments/:id', authenticate, deleteDepartment);
 
 // Sub-department routes
 router.get('/sub-departments', getAllSubDepartments);
 router.get('/sub-departments/department/:departmentId', getSubDepartmentsByDepartment);
-router.post('/sub-departments', createSubDepartment);
-router.post('/sub-departments/bulk', createSubDepartmentsBulk);
-router.put('/sub-departments/bulk', updateSubDepartmentsBulk);
-router.put('/sub-departments/:id', updateSubDepartment);
-router.delete('/sub-departments/bulk', deleteSubDepartmentsBulk);
-router.delete('/sub-departments/:id', deleteSubDepartment);
+router.post('/sub-departments', authenticate, createSubDepartment);
+router.post('/sub-departments/bulk', authenticate, createSubDepartmentsBulk);
+router.put('/sub-departments/bulk', authenticate, updateSubDepartmentsBulk);
+router.put('/sub-departments/:id', authenticate, updateSubDepartment);
+router.delete('/sub-departments/bulk', authenticate, deleteSubDepartmentsBulk);
+router.delete('/sub-departments/:id', authenticate, deleteSubDepartment);
 
 export default router;
 

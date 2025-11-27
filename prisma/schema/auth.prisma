@@ -26,6 +26,27 @@ model User {
   refreshTokens         RefreshToken[]
   activityLogs          ActivityLog[]
   loginHistory          LoginHistory[]
+
+  // CreatedBy relations for master data
+  designationsCreated      Designation[]      @relation("DesignationCreatedBy")
+  jobTypesCreated          JobType[]          @relation("JobTypeCreatedBy")
+  qualificationsCreated    Qualification[]    @relation("QualificationCreatedBy")
+  maritalStatusesCreated   MaritalStatus[]    @relation("MaritalStatusCreatedBy")
+  degreeTypesCreated       DegreeType[]       @relation("DegreeTypeCreatedBy")
+  citiesCreated            City[]             @relation("CityCreatedBy")
+  branchesCreated          Branch[]           @relation("BranchCreatedBy")
+  allowanceHeadsCreated    AllowanceHead[]    @relation("AllowanceHeadCreatedBy")
+  deductionHeadsCreated    DeductionHead[]    @relation("DeductionHeadCreatedBy")
+  loanTypesCreated         LoanType[]         @relation("LoanTypeCreatedBy")
+  leaveTypesCreated        LeaveType[]        @relation("LeaveTypeCreatedBy")
+  leavesPoliciesCreated    LeavesPolicy[]     @relation("LeavesPolicyCreatedBy")
+  equipmentsCreated        Equipment[]        @relation("EquipmentCreatedBy")
+  salaryBreakupsCreated    SalaryBreakup[]    @relation("SalaryBreakupCreatedBy")
+  taxSlabsCreated          TaxSlab[]          @relation("TaxSlabCreatedBy")
+  bonusTypesCreated        BonusType[]        @relation("BonusTypeCreatedBy")
+  approvalSettingsCreated  ApprovalSetting[]  @relation("ApprovalSettingCreatedBy")
+  departmentsCreated       Department[]       @relation("DepartmentCreatedBy")
+  subDepartmentsCreated    SubDepartment[]    @relation("SubDepartmentCreatedBy")
 }
 
 model Role {
