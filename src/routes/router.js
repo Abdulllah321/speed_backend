@@ -6,8 +6,8 @@ import maritalStatusRoutes from "./maritalStatusRoutes.js";
 import taxSlabRoutes from "./taxSlabRoutes.js";
 import eobiRoutes from "./eobiRoutes.js";
 import authRoutes from "./authRoutes.js";
-import designationRoutes from "./designationRoutes.js";
 import cityRoutes from "./cityRoutes.js";
+import branchRoutes from "./branchRoutes.js";
 const router = express.Router();
 
 // API routes
@@ -20,4 +20,5 @@ router.use("/api", taxSlabRoutes);
 router.use("/api", eobiRoutes);
 router.use("/api", designationRoutes);
 router.use("/api", cityRoutes);
+router.use("/api", branchRoutes);
 export default router;
