@@ -286,3 +286,62 @@ model EOBI {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model EmployeeGrade {
+  id          String   @id @default(uuid())
+  grade       String   @unique
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("EmployeeGradeCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmployeeStatus {
+  id          String   @id @default(uuid())
+  status      String   @unique
+  statusType  String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("EmployeeStatusCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProvidentFund {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  percentage  Decimal
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("ProvidentFundCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkingHoursPolicy {
+  id                        String   @id @default(uuid())
+  name                      String   @unique
+  startWorkingHours         String
+  endWorkingHours           String
+  shortDayMins              Int?
+  startBreakTime            String?
+  endBreakTime              String?
+  halfDayStartTime          String?
+  lateStartTime             String?
+  lateDeductionType         String?
+  applyDeductionAfterLates  Int?
+  lateDeductionPercent      Decimal?
+  halfDayDeductionType      String?
+  applyDeductionAfterHalfDays Int?
+  halfDayDeductionAmount    Decimal?
+  shortDayDeductionType     String?
+  applyDeductionAfterShortDays Int?
+  shortDayDeductionAmount   Decimal?
+  overtimeRate              Decimal?
+  gazzetedOvertimeRate      Decimal?
+  status                    String   @default("active")
+  createdById               String?
+  createdBy                 User?    @relation("WorkingHoursPolicyCreatedBy", fields: [createdById], references: [id])
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}

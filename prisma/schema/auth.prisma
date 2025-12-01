@@ -50,6 +50,10 @@ model User {
   approvalSettingsCreated  ApprovalSetting[]  @relation("ApprovalSettingCreatedBy")
   departmentsCreated       Department[]       @relation("DepartmentCreatedBy")
   subDepartmentsCreated    SubDepartment[]    @relation("SubDepartmentCreatedBy")
+  employeeGradesCreated    EmployeeGrade[]    @relation("EmployeeGradeCreatedBy")
+  employeeStatusesCreated  EmployeeStatus[]   @relation("EmployeeStatusCreatedBy")
+  providentFundsCreated    ProvidentFund[]    @relation("ProvidentFundCreatedBy")
+  workingHoursPoliciesCreated WorkingHoursPolicy[] @relation("WorkingHoursPolicyCreatedBy")
 }
 
 model Role {

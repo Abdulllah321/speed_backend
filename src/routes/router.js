@@ -14,6 +14,10 @@ import cityRoutes from "./cityRoutes.js";
 import branchRoutes from "./branchRoutes.js";
 import instituteRoutes from "./instituteRoutes.js";
 import qualificationRoutes from "./qualificationRoutes.js";
+import employeeGradeRoutes from "./employeeGradeRoutes.js";
+import employeeStatusRoutes from "./employeeStatusRoutes.js";
+import providentFundRoutes from "./providentFundRoutes.js";
+import workingHoursPolicyRoutes from "./workingHoursPolicyRoutes.js";
 const router = express.Router();
 
 // API routes
@@ -32,4 +36,8 @@ router.use("/api", cityRoutes);
 router.use("/api", branchRoutes);
 router.use("/api/institutes", instituteRoutes);
 router.use("/api/qualifications", qualificationRoutes);
+router.use("/api", employeeGradeRoutes);
+router.use("/api", employeeStatusRoutes);
+router.use("/api", providentFundRoutes);
+router.use("/api", workingHoursPolicyRoutes);
 export default router;
