@@ -124,24 +124,44 @@ model LoanType {
 }
 
 model LeaveType {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  status      String   @default("active")
-  createdById String?
-  createdBy   User?    @relation("LeaveTypeCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                      String                    @id @default(uuid())
+  name                    String                    @unique
+  status                  String                    @default("active")
+  createdById             String?
+  createdBy               User?                     @relation("LeaveTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  leavesPolicies          LeavesPolicyLeaveType[]
 }
 
 model LeavesPolicy {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  details     String?
-  status      String   @default("active")
-  createdById String?
-  createdBy   User?    @relation("LeavesPolicyCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                      String                    @id @default(uuid())
+  name                    String                    @unique
+  details                 String?
+  policyDateFrom          DateTime?
+  policyDateTill          DateTime?
+  fullDayDeductionRate    Decimal?
+  halfDayDeductionRate    Decimal?
+  shortLeaveDeductionRate Decimal?
+  status                  String                    @default("active")
+  createdById             String?
+  createdBy               User?                     @relation("LeavesPolicyCreatedBy", fields: [createdById], references: [id])
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  leaveTypes              LeavesPolicyLeaveType[]
+}
+
+model LeavesPolicyLeaveType {
+  id             String        @id @default(uuid())
+  leavesPolicyId String
+  leavesPolicy   LeavesPolicy  @relation(fields: [leavesPolicyId], references: [id], onDelete: Cascade)
+  leaveTypeId    String
+  leaveType      LeaveType     @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  numberOfLeaves Int
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([leavesPolicyId, leaveTypeId])
 }
 
 model Equipment {

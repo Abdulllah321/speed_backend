@@ -3,11 +3,19 @@ import prisma from '@/models/database.js';
 export const getAllLeavesPolicies = async (req, res) => {
   const policies = await prisma.leavesPolicy.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { createdBy: { select: { firstName: true, lastName: true } } },
+    include: { 
+      createdBy: { select: { firstName: true, lastName: true } },
+      leaveTypes: { include: { leaveType: true } }
+    },
   });
   const data = policies.map(p => ({
     ...p,
     createdBy: p.createdBy ? `${p.createdBy.firstName} ${p.createdBy.lastName || ''}`.trim() : null,
+    leaveTypes: p.leaveTypes.map(lt => ({
+      leaveTypeId: lt.leaveTypeId,
+      leaveTypeName: lt.leaveType.name,
+      numberOfLeaves: lt.numberOfLeaves,
+    })),
   }));
   res.json({ status: true, data });
 };
@@ -16,7 +24,10 @@ export const getLeavesPolicyById = async (req, res) => {
   const { id } = req.params;
   const policy = await prisma.leavesPolicy.findUnique({
     where: { id },
-    include: { createdBy: { select: { firstName: true, lastName: true } } },
+    include: { 
+      createdBy: { select: { firstName: true, lastName: true } },
+      leaveTypes: { include: { leaveType: true } }
+    },
   });
   if (!policy) {
     return res.status(404).json({ status: false, message: 'Leave policy not found' });
@@ -26,19 +37,65 @@ export const getLeavesPolicyById = async (req, res) => {
     data: {
       ...policy,
       createdBy: policy.createdBy ? `${policy.createdBy.firstName} ${policy.createdBy.lastName || ''}`.trim() : null,
+      leaveTypes: policy.leaveTypes.map(lt => ({
+        leaveTypeId: lt.leaveTypeId,
+        leaveTypeName: lt.leaveType.name,
+        numberOfLeaves: lt.numberOfLeaves,
+      })),
     },
   });
 };
 
 export const createLeavesPolicy = async (req, res) => {
-  const { name, details } = req.body;
+  const { 
+    name, 
+    details, 
+    policyDateFrom, 
+    policyDateTill, 
+    fullDayDeductionRate, 
+    halfDayDeductionRate, 
+    shortLeaveDeductionRate,
+    leaveTypes 
+  } = req.body;
+  
   if (!name?.trim()) {
     return res.status(400).json({ status: false, message: 'Name is required' });
   }
+
   const policy = await prisma.leavesPolicy.create({
-    data: { name: name.trim(), details: details?.trim() || null, createdById: req.user?.userId || null },
+    data: { 
+      name: name.trim(), 
+      details: details?.trim() || null,
+      policyDateFrom: policyDateFrom ? new Date(policyDateFrom) : null,
+      policyDateTill: policyDateTill ? new Date(policyDateTill) : null,
+      fullDayDeductionRate: fullDayDeductionRate ? parseFloat(fullDayDeductionRate) : null,
+      halfDayDeductionRate: halfDayDeductionRate ? parseFloat(halfDayDeductionRate) : null,
+      shortLeaveDeductionRate: shortLeaveDeductionRate ? parseFloat(shortLeaveDeductionRate) : null,
+      createdById: req.user?.userId || null,
+      leaveTypes: leaveTypes && Array.isArray(leaveTypes) ? {
+        create: leaveTypes.map(lt => ({
+          leaveTypeId: lt.leaveTypeId,
+          numberOfLeaves: parseInt(lt.numberOfLeaves) || 0,
+        }))
+      } : undefined,
+    },
+    include: {
+      leaveTypes: { include: { leaveType: true } },
+      createdBy: { select: { firstName: true, lastName: true } }
+    },
   });
-  res.status(201).json({ status: true, data: policy, message: 'Leave policy created successfully' });
+  
+  const data = {
+    ...policy,
+    createdBy: policy.createdBy ? `${policy.createdBy.firstName} ${policy.createdBy.lastName || ''}`.trim() : null,
+    leaveTypes: policy.leaveTypes.map(lt => ({
+      leaveTypeId: lt.leaveTypeId,
+      leaveTypeName: lt.leaveType.name,
+      numberOfLeaves: lt.numberOfLeaves,
+    })),
+  };
+  
+  res.status(201).json({ status: true, data, message: 'Leave policy created successfully' });
 };
 
 export const createLeavesPoliciesBulk = async (req, res) => {
@@ -63,15 +120,60 @@ export const createLeavesPoliciesBulk = async (req, res) => {
 
 export const updateLeavesPolicy = async (req, res) => {
   const { id } = req.params;
-  const { name, details } = req.body;
+  const { 
+    name, 
+    details, 
+    policyDateFrom, 
+    policyDateTill, 
+    fullDayDeductionRate, 
+    halfDayDeductionRate, 
+    shortLeaveDeductionRate,
+    leaveTypes 
+  } = req.body;
+  
   if (!name?.trim()) {
     return res.status(400).json({ status: false, message: 'Name is required' });
   }
+
+  // Delete existing leave types
+  await prisma.leavesPolicyLeaveType.deleteMany({
+    where: { leavesPolicyId: id },
+  });
+
   const policy = await prisma.leavesPolicy.update({
     where: { id },
-    data: { name: name.trim(), details: details?.trim() || null },
+    data: { 
+      name: name.trim(), 
+      details: details?.trim() || null,
+      policyDateFrom: policyDateFrom ? new Date(policyDateFrom) : null,
+      policyDateTill: policyDateTill ? new Date(policyDateTill) : null,
+      fullDayDeductionRate: fullDayDeductionRate ? parseFloat(fullDayDeductionRate) : null,
+      halfDayDeductionRate: halfDayDeductionRate ? parseFloat(halfDayDeductionRate) : null,
+      shortLeaveDeductionRate: shortLeaveDeductionRate ? parseFloat(shortLeaveDeductionRate) : null,
+      leaveTypes: leaveTypes && Array.isArray(leaveTypes) ? {
+        create: leaveTypes.map(lt => ({
+          leaveTypeId: lt.leaveTypeId,
+          numberOfLeaves: parseInt(lt.numberOfLeaves) || 0,
+        }))
+      } : undefined,
+    },
+    include: {
+      leaveTypes: { include: { leaveType: true } },
+      createdBy: { select: { firstName: true, lastName: true } }
+    },
   });
-  res.json({ status: true, data: policy, message: 'Leave policy updated successfully' });
+  
+  const data = {
+    ...policy,
+    createdBy: policy.createdBy ? `${policy.createdBy.firstName} ${policy.createdBy.lastName || ''}`.trim() : null,
+    leaveTypes: policy.leaveTypes.map(lt => ({
+      leaveTypeId: lt.leaveTypeId,
+      leaveTypeName: lt.leaveType.name,
+      numberOfLeaves: lt.numberOfLeaves,
+    })),
+  };
+  
+  res.json({ status: true, data, message: 'Leave policy updated successfully' });
 };
 
 export const deleteLeavesPolicy = async (req, res) => {
