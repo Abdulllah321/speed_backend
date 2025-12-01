@@ -11,38 +11,23 @@ export const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify token
+    // Verify token (fast operation - no database query)
     const decoded = jwt.verify(token, authConfig.jwt.accessSecret, { issuer: authConfig.jwt.issuer });
 
-    // Check if user exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true, status: true, passwordChangedAt: true, roleId: true },
-    });
+    // Attach user info to request immediately (don't wait for DB queries)
+    req.user = decoded;
 
-    if (!user) {
-      return res.status(401).json({ status: false, message: 'User not found' });
-    }
-
-    if (user.status !== 'active') {
-      return res.status(403).json({ status: false, message: 'Account is not active' });
-    }
-
-    // Check if password was changed after token was issued
-    if (user.passwordChangedAt) {
-      const tokenIssuedAt = new Date(decoded.iat * 1000);
-      if (user.passwordChangedAt > tokenIssuedAt) {
-        return res.status(401).json({ status: false, message: 'Password changed. Please login again.' });
-      }
-    }
-
-    // Update session last activity
-    await prisma.session.updateMany({
+    // Update session last activity asynchronously (non-blocking)
+    // This runs in the background and doesn't block the request
+    prisma.session.updateMany({
       where: { token, userId: decoded.userId, isActive: true },
       data: { lastActivityAt: new Date() },
+    }).catch(err => {
+      // Silently fail - session update is not critical for request processing
+      console.error('Session update failed (non-critical):', err);
     });
 
-    req.user = decoded;
+    // Continue immediately without waiting for DB queries
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

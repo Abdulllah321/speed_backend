@@ -22,43 +22,54 @@ export const getBranchById = async (req, res) => {
 };
 
 export const createBranch = async (req, res) => {
-  const { name, address, cityId, status } = req.body;
-  if (!name?.trim()) {
-    return res.status(400).json({ status: false, message: 'Name is required' });
+  try {
+    const { name, address, cityId, status } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ status: false, message: 'Name is required' });
+    }
+  
+    const branch = await prisma.branch.create({
+      data: {
+        name: name.trim(),
+        address: address?.trim() || null,
+        cityId: cityId || null,
+        status: status || 'active',
+        createdById: req.user?.userId || null,
+      },
+      include: { city: { include: { country: true } } },
+    });
+    res.status(201).json({ status: true, data: branch, message: 'Branch created successfully' });
+  } catch (error) {
+    console.error('Error creating branch:', error);
+    res.status(500).json({ status: false, message: error.message || 'Failed to create branch' });
   }
-  const branch = await prisma.branch.create({
-    data: {
-      name: name.trim(),
-      address: address?.trim() || null,
-      cityId: cityId || null,
-      status: status || 'active',
-      createdById: req.user?.id || null,
-    },
-    include: { city: { include: { country: true } } },
-  });
-  res.status(201).json({ status: true, data: branch, message: 'Branch created successfully' });
 };
 
 export const createBranchesBulk = async (req, res) => {
-  const { items } = req.body;
-  if (!items?.length) {
-    return res.status(400).json({ status: false, message: 'At least one branch is required' });
+  try {
+    const { items } = req.body;
+    if (!items?.length) {
+      return res.status(400).json({ status: false, message: 'At least one branch is required' });
+    }
+    const validItems = items.filter(i => i.name?.trim());
+    if (!validItems.length) {
+      return res.status(400).json({ status: false, message: 'At least one valid branch is required' });
+    }
+    const result = await prisma.branch.createMany({
+      data: validItems.map(i => ({
+        name: i.name.trim(),
+        address: i.address?.trim() || null,
+        cityId: i.cityId || null,
+        status: i.status || 'active',
+        createdById: req.user?.userId || null,
+      })),
+      skipDuplicates: true,
+    });
+    res.status(201).json({ status: true, data: result, message: `${result.count} branch(es) created successfully` });
+  } catch (error) {
+    console.error('Error creating branches bulk:', error);
+    res.status(500).json({ status: false, message: error.message || 'Failed to create branches' });
   }
-  const validItems = items.filter(i => i.name?.trim());
-  if (!validItems.length) {
-    return res.status(400).json({ status: false, message: 'At least one valid branch is required' });
-  }
-  const result = await prisma.branch.createMany({
-    data: validItems.map(i => ({
-      name: i.name.trim(),
-      address: i.address?.trim() || null,
-      cityId: i.cityId || null,
-      status: i.status || 'active',
-      createdById: req.user?.id || null,
-    })),
-    skipDuplicates: true,
-  });
-  res.status(201).json({ status: true, data: result, message: `${result.count} branch(es) created successfully` });
 };
 
 export const updateBranch = async (req, res) => {
