@@ -20,18 +20,30 @@ model JobType {
   updatedAt   DateTime @updatedAt
 }
 
+model Institute {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  status         String          @default("active")
+  createdById    String?
+  createdBy      User?           @relation("InstituteCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  qualifications Qualification[]
+}
+
 model Qualification {
-  id            String   @id @default(uuid())
+  id            String     @id @default(uuid())
+  instituteId   String?
+  institute     Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
   instituteName String
   qualification String
   country       String
   city          String
-  subDepartment String?
-  status        String   @default("active")
+  status        String     @default("active")
   createdById   String?
-  createdBy     User?    @relation("QualificationCreatedBy", fields: [createdById], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdBy     User?      @relation("QualificationCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model MaritalStatus {
@@ -56,9 +68,14 @@ model DegreeType {
 
 model Country {
   id        String   @id @default(uuid())
-  name      String   
-  code      String?  
+  name      String
+  iso       String
+  nicename  String
+  iso3      String
+  phoneCode Int
+  numcode   Int
   cities    City[]
+  states    State[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -66,10 +83,10 @@ model Country {
 model City {
   id          String   @id @default(uuid())
   name        String
-  lat         Float?
-  lng         Float?
-  countryId   String?
-  country     Country? @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  countryId   String
+  country     Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  stateId     String
+  state       State   @relation(fields: [stateId], references: [id], onDelete: Cascade)
   status      String   @default("active")
   createdById String?
   createdBy   User?    @relation("CityCreatedBy", fields: [createdById], references: [id])
@@ -77,7 +94,20 @@ model City {
   updatedAt   DateTime @updatedAt
   branches    Branch[]
 
-  @@unique([name, countryId])
+  @@unique([name, countryId, stateId])
+}
+
+model State {
+  id          String   @id @default(uuid())
+  name        String
+  countryId   String
+  country     Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  status      String   @default("active")
+  createdById String?
+  createdBy   User?    @relation("StateCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cities      City[]
 }
 
 model Branch {
@@ -124,24 +154,43 @@ model LoanType {
 }
 
 model LeaveType {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  status      String   @default("active")
-  createdById String?
-  createdBy   User?    @relation("LeaveTypeCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String              @id @default(uuid())
+  name              String              @unique
+  status            String              @default("active")
+  createdById       String?
+  createdBy         User?               @relation("LeaveTypeCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  leavesPolicyItems LeavesPolicyItem[]
 }
 
 model LeavesPolicy {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  details     String?
-  status      String   @default("active")
-  createdById String?
-  createdBy   User?    @relation("LeavesPolicyCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                      String              @id @default(uuid())
+  name                    String              @unique
+  dateFrom                DateTime
+  dateTill                DateTime
+  fullDayDeductionRate    Decimal             @default(1.0)
+  halfDayDeductionRate    Decimal             @default(0.5)
+  shortLeaveDeductionRate Decimal             @default(0.25)
+  status                  String              @default("active")
+  createdById             String?
+  createdBy               User?               @relation("LeavesPolicyCreatedBy", fields: [createdById], references: [id])
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  items                   LeavesPolicyItem[]
+}
+
+model LeavesPolicyItem {
+  id             String        @id @default(uuid())
+  leavesPolicyId String
+  leavesPolicy   LeavesPolicy  @relation(fields: [leavesPolicyId], references: [id], onDelete: Cascade)
+  leaveTypeId    String
+  leaveType      LeaveType     @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  quantity       Int
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([leavesPolicyId, leaveTypeId])
 }
 
 model Equipment {
@@ -199,7 +248,6 @@ model ApprovalSetting {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
 
 // Department related models
 

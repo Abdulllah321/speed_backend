@@ -13,16 +13,17 @@ import {
 
 const router = express.Router();
 
-router.use(authenticate);
-
+// GET routes (no auth required for reading)
 router.get('/leaves-policies', getAllLeavesPolicies);
 router.get('/leaves-policies/:id', getLeavesPolicyById);
-router.post('/leaves-policies', createLeavesPolicy);
-router.post('/leaves-policies/bulk', createLeavesPoliciesBulk);
-router.put('/leaves-policies/bulk', updateLeavesPoliciesBulk);
-router.put('/leaves-policies/:id', updateLeavesPolicy);
-router.delete('/leaves-policies/bulk', deleteLeavesPoliciesBulk);
-router.delete('/leaves-policies/:id', deleteLeavesPolicy);
+
+// Write routes (auth required)
+router.post('/leaves-policies', authenticate, createLeavesPolicy);
+router.post('/leaves-policies/bulk', authenticate, createLeavesPoliciesBulk);
+router.put('/leaves-policies/bulk', authenticate, updateLeavesPoliciesBulk);
+router.put('/leaves-policies/:id', authenticate, updateLeavesPolicy);
+router.delete('/leaves-policies/bulk', authenticate, deleteLeavesPoliciesBulk);
+router.delete('/leaves-policies/:id', authenticate, deleteLeavesPolicy);
 
 export default router;
 

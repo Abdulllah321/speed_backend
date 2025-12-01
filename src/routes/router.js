@@ -12,6 +12,8 @@ import equipmentRoutes from "./equipmentRoutes.js";
 import authRoutes from "./authRoutes.js";
 import cityRoutes from "./cityRoutes.js";
 import branchRoutes from "./branchRoutes.js";
+import instituteRoutes from "./instituteRoutes.js";
+import qualificationRoutes from "./qualificationRoutes.js";
 const router = express.Router();
 
 // API routes
@@ -28,4 +30,6 @@ router.use("/api", loanTypeRoutes);
 router.use("/api", equipmentRoutes);
 router.use("/api", cityRoutes);
 router.use("/api", branchRoutes);
+router.use("/api/institutes", instituteRoutes);
+router.use("/api/qualifications", qualificationRoutes);
 export default router;

@@ -2,12 +2,16 @@ import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import bcrypt from 'bcrypt';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { seedCountries } from './seeds/countries.js';
+import { seedInstitutes } from './seeds/institutes.js';
+import {
+  seedDepartments,
+  seedSubDepartments,
+  seedDesignations,
+  seedJobTypes,
+  seedMaritalStatuses,
+} from './seeds/master-data.js';
+import { seedCities } from './seeds/cities.js';
 
 const connectionString = process.env.DATABASE_URL;
 const adapter = new PrismaPg({ connectionString });
@@ -198,45 +202,29 @@ async function main() {
   });
 
   // Seed countries
-  console.log('🌍 Seeding countries...');
-  const countriesPath = join(__dirname, '..', 'country.json');
-  const countriesData = JSON.parse(readFileSync(countriesPath, 'utf-8'));
-  
-  for (const item of countriesData) {
-    await prisma.country.upsert({
-      where: { name: item.country },
-      update: {},
-      create: {
-        name: item.country,
-        code: item.calling_code?.toString(),
-      },
-    });
-  }
-  console.log(`   ✓ ${countriesData.length} countries seeded`);
+  await seedCountries(prisma);
 
-  // Seed cities (Pakistan)
-  console.log('🏙️  Seeding cities...');
-  const citiesPath = join(__dirname, '..', 'city.json');
-  const citiesData = JSON.parse(readFileSync(citiesPath, 'utf-8'));
-  
-  const pakistan = await prisma.country.findUnique({ where: { name: 'Pakistan' } });
-  if (pakistan) {
-    for (const city of citiesData) {
-      await prisma.city.upsert({
-        where: { name_countryId: { name: city.name, countryId: pakistan.id } },
-        update: { lat: city.lat, lng: city.lng },
-        create: {
-          name: city.name,
-          lat: city.lat,
-          lng: city.lng,
-          countryId: pakistan.id,
-        },
-      });
-    }
-    console.log(`   ✓ ${citiesData.length} cities seeded for Pakistan`);
-  } else {
-    console.log('   ⚠️ Pakistan not found, skipping cities');
-  }
+  // Seed states and cities (must be after countries)
+  await seedCities(prisma);
+
+  // Seed institutes
+  await seedInstitutes(prisma);
+
+  // Seed departments
+  await seedDepartments(prisma);
+
+  // Seed sub-departments (must be after departments)
+  await seedSubDepartments(prisma);
+
+  // Seed designations
+  await seedDesignations(prisma);
+
+  // Seed job types
+  await seedJobTypes(prisma);
+
+  // Seed marital statuses
+  await seedMaritalStatuses(prisma);
+ 
 
   console.log('');
   console.log('═══════════════════════════════════════════');

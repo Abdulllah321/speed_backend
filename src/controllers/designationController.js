@@ -4,6 +4,14 @@ import prisma from '@/models/database.js';
 export const getAllDesignations = async (req, res) => {
   const designations = await prisma.designation.findMany({
     orderBy: { createdAt: 'desc' },
+    include: {
+      createdBy: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
   });
   res.json({ status: true, data: designations });
 };
@@ -25,13 +33,9 @@ export const createDesignation = async (req, res) => {
   if (!name?.trim()) {
     return res.status(400).json({ status: false, message: 'Name is required' });
   }
-  let createdBy = null;
-  if (req.user?.userId) {
-    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { firstName: true, lastName: true } });
-    if (user) createdBy = `${user.firstName} ${user.lastName || ''}`.trim();
-  }
+
   const designation = await prisma.designation.create({
-    data: { name: name.trim(), createdBy },
+    data: { name: name.trim(), createdById: req.user.userId },
   });
   res.status(201).json({ status: true, data: designation, message: 'Designation created successfully' });
 };
@@ -45,13 +49,9 @@ export const createDesignationsBulk = async (req, res) => {
   if (!validNames.length) {
     return res.status(400).json({ status: false, message: 'At least one valid name is required' });
   }
-  let createdBy = null;
-  if (req.user?.userId) {
-    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { firstName: true, lastName: true } });
-    if (user) createdBy = `${user.firstName} ${user.lastName || ''}`.trim();
-  }
+
   const result = await prisma.designation.createMany({
-    data: validNames.map(name => ({ name, createdBy })),
+    data: validNames.map(name => ({ name, createdById: req.user.userId })),
     skipDuplicates: true,
   });
   res.status(201).json({ status: true, data: result, message: `${result.count} designation(s) created successfully` });

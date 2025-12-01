@@ -30,9 +30,11 @@ model User {
   // CreatedBy relations for master data
   designationsCreated      Designation[]      @relation("DesignationCreatedBy")
   jobTypesCreated          JobType[]          @relation("JobTypeCreatedBy")
+  institutesCreated        Institute[]        @relation("InstituteCreatedBy")
   qualificationsCreated    Qualification[]    @relation("QualificationCreatedBy")
   maritalStatusesCreated   MaritalStatus[]    @relation("MaritalStatusCreatedBy")
   degreeTypesCreated       DegreeType[]       @relation("DegreeTypeCreatedBy")
+  statesCreated            State[]            @relation("StateCreatedBy")
   citiesCreated            City[]             @relation("CityCreatedBy")
   branchesCreated          Branch[]           @relation("BranchCreatedBy")
   allowanceHeadsCreated    AllowanceHead[]    @relation("AllowanceHeadCreatedBy")

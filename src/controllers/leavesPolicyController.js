@@ -1,44 +1,141 @@
 import prisma from '@/models/database.js';
 
 export const getAllLeavesPolicies = async (req, res) => {
-  const policies = await prisma.leavesPolicy.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { createdBy: { select: { firstName: true, lastName: true } } },
-  });
-  const data = policies.map(p => ({
-    ...p,
-    createdBy: p.createdBy ? `${p.createdBy.firstName} ${p.createdBy.lastName || ''}`.trim() : null,
-  }));
-  res.json({ status: true, data });
+  try {
+    const policies = await prisma.leavesPolicy.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        createdBy: { select: { firstName: true, lastName: true } },
+        items: {
+          include: {
+            leaveType: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+    const data = policies.map(p => ({
+      ...p,
+      fullDayDeductionRate: Number(p.fullDayDeductionRate),
+      halfDayDeductionRate: Number(p.halfDayDeductionRate),
+      shortLeaveDeductionRate: Number(p.shortLeaveDeductionRate),
+      createdBy: p.createdBy ? `${p.createdBy.firstName} ${p.createdBy.lastName || ''}`.trim() : null,
+    }));
+    res.json({ status: true, data });
+  } catch (error) {
+    console.error('Error fetching leave policies:', error);
+    res.status(500).json({ status: false, message: error.message || 'Failed to fetch leave policies' });
+  }
 };
 
 export const getLeavesPolicyById = async (req, res) => {
-  const { id } = req.params;
-  const policy = await prisma.leavesPolicy.findUnique({
-    where: { id },
-    include: { createdBy: { select: { firstName: true, lastName: true } } },
-  });
-  if (!policy) {
-    return res.status(404).json({ status: false, message: 'Leave policy not found' });
+  try {
+    const { id } = req.params;
+    const policy = await prisma.leavesPolicy.findUnique({
+      where: { id },
+      include: {
+        createdBy: { select: { firstName: true, lastName: true } },
+        items: {
+          include: {
+            leaveType: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+    if (!policy) {
+      return res.status(404).json({ status: false, message: 'Leave policy not found' });
+    }
+    res.json({
+      status: true,
+      data: {
+        ...policy,
+        fullDayDeductionRate: Number(policy.fullDayDeductionRate),
+        halfDayDeductionRate: Number(policy.halfDayDeductionRate),
+        shortLeaveDeductionRate: Number(policy.shortLeaveDeductionRate),
+        createdBy: policy.createdBy ? `${policy.createdBy.firstName} ${policy.createdBy.lastName || ''}`.trim() : null,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching leave policy:', error);
+    res.status(500).json({ status: false, message: error.message || 'Failed to fetch leave policy' });
   }
-  res.json({
-    status: true,
-    data: {
-      ...policy,
-      createdBy: policy.createdBy ? `${policy.createdBy.firstName} ${policy.createdBy.lastName || ''}`.trim() : null,
-    },
-  });
 };
 
 export const createLeavesPolicy = async (req, res) => {
-  const { name, details } = req.body;
-  if (!name?.trim()) {
-    return res.status(400).json({ status: false, message: 'Name is required' });
+  try {
+    const {
+      name,
+      dateFrom,
+      dateTill,
+      fullDayDeductionRate,
+      halfDayDeductionRate,
+      shortLeaveDeductionRate,
+      items,
+    } = req.body;
+
+    if (!name?.trim()) {
+      return res.status(400).json({ status: false, message: 'Name is required' });
+    }
+    if (!dateFrom || !dateTill) {
+      return res.status(400).json({ status: false, message: 'Date from and date till are required' });
+    }
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: false, message: 'At least one leave type item is required' });
+    }
+
+    // Validate items
+    const validItems = items.filter(item => item.leaveTypeId && item.quantity > 0);
+    if (validItems.length === 0) {
+      return res.status(400).json({ status: false, message: 'At least one valid leave type item is required' });
+    }
+
+    const policy = await prisma.leavesPolicy.create({
+      data: {
+        name: name.trim(),
+        dateFrom: new Date(dateFrom),
+        dateTill: new Date(dateTill),
+        fullDayDeductionRate: parseFloat(fullDayDeductionRate) || 1.0,
+        halfDayDeductionRate: parseFloat(halfDayDeductionRate) || 0.5,
+        shortLeaveDeductionRate: parseFloat(shortLeaveDeductionRate) || 0.25,
+        createdById: req.user?.userId || null,
+        items: {
+          create: validItems.map(item => ({
+            leaveTypeId: item.leaveTypeId,
+            quantity: parseInt(item.quantity),
+          })),
+        },
+      },
+      include: {
+        items: {
+          include: {
+            leaveType: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      status: true,
+      data: {
+        ...policy,
+        fullDayDeductionRate: Number(policy.fullDayDeductionRate),
+        halfDayDeductionRate: Number(policy.halfDayDeductionRate),
+        shortLeaveDeductionRate: Number(policy.shortLeaveDeductionRate),
+      },
+      message: 'Leave policy created successfully',
+    });
+  } catch (error) {
+    console.error('Error creating leave policy:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ status: false, message: 'Leave policy with this name already exists' });
+    }
+    res.status(500).json({ status: false, message: error.message || 'Failed to create leave policy' });
   }
-  const policy = await prisma.leavesPolicy.create({
-    data: { name: name.trim(), details: details?.trim() || null, createdById: req.user?.userId || null },
-  });
-  res.status(201).json({ status: true, data: policy, message: 'Leave policy created successfully' });
 };
 
 export const createLeavesPoliciesBulk = async (req, res) => {
