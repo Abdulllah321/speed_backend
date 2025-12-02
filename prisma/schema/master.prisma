@@ -339,6 +339,7 @@ model WorkingHoursPolicy {
   shortDayDeductionAmount   Decimal?
   overtimeRate              Decimal?
   gazzetedOvertimeRate      Decimal?
+  dayOverrides              Json?    // Stores day-wise overrides: { monday: { enabled, overrideHours, startTime, endTime, overrideBreak, startBreakTime, endBreakTime, dayType }, ... }
   status                    String   @default("active")
   createdById               String?
   createdBy                 User?    @relation("WorkingHoursPolicyCreatedBy", fields: [createdById], references: [id])
