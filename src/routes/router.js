@@ -19,10 +19,12 @@ import employeeStatusRoutes from "./employeeStatusRoutes.js";
 import employeeRoutes from "./employeeRoutes.js";
 import providentFundRoutes from "./providentFundRoutes.js";
 import workingHoursPolicyRoutes from "./workingHoursPolicyRoutes.js";
+import realtimeRoutes from "./realtimeRoutes.js";
 const router = express.Router();
 
 // API routes
 router.use("/api/auth", authRoutes);
+router.use("/", realtimeRoutes);
 router.use("/api", departmentRoutes);
 router.use("/api", designationRoutes);
 router.use("/api", jobTypeRoutes);

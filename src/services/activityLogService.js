@@ -1,4 +1,5 @@
 import prisma from '../models/database.js';
+import realtimeService from './realtimeService.js';
 
 class ActivityLogService {
   async log({
@@ -17,7 +18,7 @@ class ActivityLogService {
     metadata = null,
   }) {
     try {
-      return await prisma.activityLog.create({
+      const activityLog = await prisma.activityLog.create({
         data: {
           userId,
           action,
@@ -33,9 +34,25 @@ class ActivityLogService {
           errorMessage,
           metadata: metadata ? JSON.stringify(metadata) : null,
         },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       });
+
+      // Emit realtime event
+      realtimeService.emitActivityLog(activityLog);
+
+      return activityLog;
     } catch (error) {
       console.error('Activity log error:', error);
+      return null;
     }
   }
 

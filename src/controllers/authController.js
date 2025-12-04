@@ -8,6 +8,24 @@ import activityLogService from "../services/activityLogService.js";
 import securityService from "../services/securityService.js";
 
 // Helper functions
+// Convert JWT expiry string (e.g., '30d', '7d', '2h') to milliseconds
+const parseExpiryToMs = (expiryString) => {
+  const match = expiryString.match(/^(\d+)([smhd])$/);
+  if (!match) return 30 * 24 * 60 * 60 * 1000; // Default 30 days
+
+  const value = parseInt(match[1]);
+  const unit = match[2];
+
+  const multipliers = {
+    s: 1000, // seconds
+    m: 60 * 1000, // minutes
+    h: 60 * 60 * 1000, // hours
+    d: 24 * 60 * 60 * 1000, // days
+  };
+
+  return value * (multipliers[unit] || multipliers.d);
+};
+
 const generateTokens = (user, tokenFamily = null) => {
   const family = tokenFamily || crypto.randomUUID();
 
@@ -41,6 +59,76 @@ const getClientInfo = (req) => ({
     req.ip || req.headers["x-forwarded-for"] || req.connection?.remoteAddress,
   userAgent: req.headers["user-agent"],
 });
+
+// Shared helper to refresh tokens (used by both controller and middleware)
+export const refreshTokensHelper = async (refreshTokenValue) => {
+  try {
+    const decoded = jwt.verify(refreshTokenValue, authConfig.jwt.refreshSecret);
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshTokenValue },
+    });
+
+    if (
+      !storedToken ||
+      storedToken.isRevoked ||
+      new Date() > storedToken.expiresAt
+    ) {
+      return { success: false, error: "Invalid refresh token" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
+    });
+
+    if (!user || user.status !== "active") {
+      return { success: false, error: "User not found or inactive" };
+    }
+
+    // Calculate new expiry time (sliding session - extend from now)
+    const refreshTokenExpiryMs = parseExpiryToMs(authConfig.jwt.refreshExpiresIn);
+    const newExpiresAt = new Date(Date.now() + refreshTokenExpiryMs);
+
+    // Revoke old token
+    await prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { isRevoked: true },
+    });
+
+    // Generate new tokens with same family (sliding session)
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+      family,
+    } = generateTokens(user, decoded.family);
+
+    // Store new refresh token with extended expiry (sliding session)
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: newRefreshToken,
+        family,
+        expiresAt: newExpiresAt,
+      },
+    });
+
+    return {
+      success: true,
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        userId: user.id,
+        email: user.email,
+        roleId: user.roleId,
+      },
+    };
+  } catch (error) {
+    console.error("Token refresh helper error:", error);
+    return { success: false, error: "Invalid refresh token" };
+  }
+};
 
 // Controllers
 export const register = async (req, res) => {
@@ -196,13 +284,14 @@ export const login = async (req, res) => {
     // Generate tokens
     const { accessToken, refreshToken, family } = generateTokens(user);
 
-    // Store refresh token (1 day session)
+    // Store refresh token with config-based expiry (sliding session)
+    const refreshTokenExpiryMs = parseExpiryToMs(authConfig.jwt.refreshExpiresIn);
     await prisma.refreshToken.create({
       data: {
         userId: user.id,
         token: refreshToken,
         family,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day
+        expiresAt: new Date(Date.now() + refreshTokenExpiryMs),
       },
     });
 
@@ -254,65 +343,20 @@ export const login = async (req, res) => {
 export const refreshToken = async (req, res) => {
   const { refreshToken: token } = req.body;
 
-  try {
-    const decoded = jwt.verify(token, authConfig.jwt.refreshSecret);
-    const storedToken = await prisma.refreshToken.findUnique({
-      where: { token },
-    });
-
-    if (
-      !storedToken ||
-      storedToken.isRevoked ||
-      new Date() > storedToken.expiresAt
-    ) {
-      return res
-        .status(401)
-        .json({ status: false, message: "Invalid refresh token" });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      include: {
-        role: { include: { permissions: { include: { permission: true } } } },
-      },
-    });
-
-    if (!user || user.status !== "active") {
-      return res
-        .status(401)
-        .json({ status: false, message: "User not found or inactive" });
-    }
-
-    // Revoke old token
-    await prisma.refreshToken.update({
-      where: { id: storedToken.id },
-      data: { isRevoked: true },
-    });
-
-    // Generate new tokens
-    const {
-      accessToken,
-      refreshToken: newRefreshToken,
-      family,
-    } = generateTokens(user, decoded.family);
-
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        token: newRefreshToken,
-        family,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day
-      },
-    });
-
-    res.json({
-      status: true,
-      data: { accessToken, refreshToken: newRefreshToken },
-    });
-  } catch (error) {
-    console.error("Token refresh error:", error);
-    res.status(401).json({ status: false, message: "Invalid refresh token" });
+  if (!token) {
+    return res.status(401).json({ status: false, message: "Refresh token required" });
   }
+
+  const result = await refreshTokensHelper(token);
+
+  if (!result.success) {
+    return res.status(401).json({ status: false, message: result.error });
+  }
+
+  res.json({
+    status: true,
+    data: { accessToken: result.accessToken, refreshToken: result.refreshToken },
+  });
 };
 
 export const logout = async (req, res) => {

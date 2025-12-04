@@ -1,4 +1,6 @@
 import prisma from '@/models/database.js';
+import activityLogService from '@/services/activityLogService.js';
+import { logActivity } from '@/util/activityLogHelper.js';
 
 // Get all employees
 export const getAllEmployees = async (req, res) => {
@@ -277,9 +279,30 @@ export const createEmployee = async (req, res) => {
       },
     });
 
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'create',
+      module: 'employees',
+      entity: 'Employee',
+      entityId: employee.id,
+      description: `Created employee: ${employee.employeeName} (${employee.employeeId})`,
+      newValues: { employeeId: employee.employeeId, employeeName: employee.employeeName, officialEmail: employee.officialEmail },
+      req,
+    });
+
     res.status(201).json({ status: true, data: employee, message: 'Employee created successfully' });
   } catch (error) {
     console.error('Error creating employee:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'create',
+      module: 'employees',
+      entity: 'Employee',
+      description: 'Failed to create employee',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
     if (error.code === 'P2002') {
       const field = error.meta?.target?.[0];
       return res.status(400).json({ 
@@ -354,13 +377,42 @@ export const updateEmployee = async (req, res) => {
       updateData.tools = equipmentMap.tools;
     }
 
+    const oldEmployee = await prisma.employee.findUnique({ where: { id } });
+    if (!oldEmployee) {
+      return res.status(404).json({ status: false, message: 'Employee not found' });
+    }
+
     const employee = await prisma.employee.update({
       where: { id },
       data: updateData,
     });
+
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'update',
+      module: 'employees',
+      entity: 'Employee',
+      entityId: employee.id,
+      description: `Updated employee: ${employee.employeeName} (${employee.employeeId})`,
+      oldValues: { employeeName: oldEmployee.employeeName, employeeId: oldEmployee.employeeId },
+      newValues: { employeeName: employee.employeeName, employeeId: employee.employeeId },
+      req,
+    });
+
     res.json({ status: true, data: employee, message: 'Employee updated successfully' });
   } catch (error) {
     console.error('Error updating employee:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'update',
+      module: 'employees',
+      entity: 'Employee',
+      entityId: req.params.id,
+      description: 'Failed to update employee',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
     if (error.code === 'P2002') {
       return res.status(400).json({ status: false, message: 'Employee with this unique field already exists' });
     }
@@ -372,10 +424,38 @@ export const updateEmployee = async (req, res) => {
 export const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;
+    const employee = await prisma.employee.findUnique({ where: { id } });
+    if (!employee) {
+      return res.status(404).json({ status: false, message: 'Employee not found' });
+    }
+
     await prisma.employee.delete({ where: { id } });
+
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'delete',
+      module: 'employees',
+      entity: 'Employee',
+      entityId: id,
+      description: `Deleted employee: ${employee.employeeName} (${employee.employeeId})`,
+      oldValues: { employeeName: employee.employeeName, employeeId: employee.employeeId },
+      req,
+    });
+
     res.json({ status: true, message: 'Employee deleted successfully' });
   } catch (error) {
     console.error('Error deleting employee:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'delete',
+      module: 'employees',
+      entity: 'Employee',
+      entityId: req.params.id,
+      description: 'Failed to delete employee',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
     res.status(500).json({ status: false, message: error.message || 'Failed to delete employee' });
   }
 };

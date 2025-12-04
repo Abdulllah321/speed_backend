@@ -1,4 +1,6 @@
 import prisma from '@/models/database.js';
+import activityLogService from '@/services/activityLogService.js';
+import { logActivity } from '@/util/activityLogHelper.js';
 
 // Department CRUD
 export const getAllDepartments = async (req, res) => {
@@ -38,51 +40,172 @@ export const getDepartmentById = async (req, res) => {
 };
 
 export const createDepartment = async (req, res) => {
-  const { name } = req.body;
-  if (!name?.trim()) {
-    return res.status(400).json({ status: false, message: 'Name is required' });
+  try {
+    const { name } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ status: false, message: 'Name is required' });
+    }
+    const department = await prisma.department.create({
+      data: { name: name.trim(), createdById: req.user?.userId || null },
+    });
+    
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'create',
+      module: 'departments',
+      entity: 'Department',
+      entityId: department.id,
+      description: `Created department: ${department.name}`,
+      newValues: { name: department.name },
+      req,
+    });
+    
+    res.status(201).json({ status: true, data: department, message: 'Department created successfully' });
+  } catch (error) {
+    console.error('Create department error:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'create',
+      module: 'departments',
+      entity: 'Department',
+      description: 'Failed to create department',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
+    res.status(500).json({ status: false, message: 'Failed to create department' });
   }
-  const department = await prisma.department.create({
-    data: { name: name.trim(), createdById: req.user?.userId || null },
-  });
-  res.status(201).json({ status: true, data: department, message: 'Department created successfully' });
 };
 
 export const createDepartmentsBulk = async (req, res) => {
-  const { names } = req.body;
-  if (!names?.length) {
-    return res.status(400).json({ status: false, message: 'At least one name is required' });
+  try {
+    const { names } = req.body;
+    if (!names?.length) {
+      return res.status(400).json({ status: false, message: 'At least one name is required' });
+    }
+    const validNames = names.map(n => n?.trim()).filter(Boolean);
+    if (!validNames.length) {
+      return res.status(400).json({ status: false, message: 'At least one valid name is required' });
+    }
+    const result = await prisma.department.createMany({
+      data: validNames.map(name => ({ name, createdById: req.user?.userId || null })),
+      skipDuplicates: true,
+    });
+    
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'create_bulk',
+      module: 'departments',
+      entity: 'Department',
+      description: `Bulk created ${result.count} department(s)`,
+      newValues: { count: result.count, names: validNames },
+      req,
+    });
+    
+    res.status(201).json({ status: true, data: result, message: `${result.count} department(s) created successfully` });
+  } catch (error) {
+    console.error('Bulk create departments error:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'create_bulk',
+      module: 'departments',
+      entity: 'Department',
+      description: 'Failed to bulk create departments',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
+    res.status(500).json({ status: false, message: 'Failed to create departments' });
   }
-  const validNames = names.map(n => n?.trim()).filter(Boolean);
-  if (!validNames.length) {
-    return res.status(400).json({ status: false, message: 'At least one valid name is required' });
-  }
-  const result = await prisma.department.createMany({
-    data: validNames.map(name => ({ name, createdById: req.user?.userId || null })),
-    skipDuplicates: true,
-  });
-  res.status(201).json({ status: true, data: result, message: `${result.count} department(s) created successfully` });
 };
 
 export const updateDepartment = async (req, res) => {
-  const { id } = req.params;
-  const { name } = req.body;
-  if (!name?.trim()) {
-    return res.status(400).json({ status: false, message: 'Name is required' });
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ status: false, message: 'Name is required' });
+    }
+    
+    const oldDepartment = await prisma.department.findUnique({ where: { id } });
+    if (!oldDepartment) {
+      return res.status(404).json({ status: false, message: 'Department not found' });
+    }
+    
+    const department = await prisma.department.update({
+      where: { id },
+      data: { name: name.trim() },
+    });
+    
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'update',
+      module: 'departments',
+      entity: 'Department',
+      entityId: department.id,
+      description: `Updated department: ${department.name}`,
+      oldValues: { name: oldDepartment.name },
+      newValues: { name: department.name },
+      req,
+    });
+    
+    res.json({ status: true, data: department, message: 'Department updated successfully' });
+  } catch (error) {
+    console.error('Update department error:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'update',
+      module: 'departments',
+      entity: 'Department',
+      entityId: req.params.id,
+      description: 'Failed to update department',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
+    res.status(500).json({ status: false, message: 'Failed to update department' });
   }
-  const department = await prisma.department.update({
-    where: { id },
-    data: { name: name.trim() },
-  });
-  res.json({ status: true, data: department, message: 'Department updated successfully' });
 };
 
 export const deleteDepartment = async (req, res) => {
-  const { id } = req.params;
-  await prisma.department.delete({
-    where: { id },
-  });
-  res.json({ status: true, message: 'Department deleted successfully' });
+  try {
+    const { id } = req.params;
+    const department = await prisma.department.findUnique({ where: { id } });
+    if (!department) {
+      return res.status(404).json({ status: false, message: 'Department not found' });
+    }
+    
+    await prisma.department.delete({
+      where: { id },
+    });
+    
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'delete',
+      module: 'departments',
+      entity: 'Department',
+      entityId: id,
+      description: `Deleted department: ${department.name}`,
+      oldValues: { name: department.name },
+      req,
+    });
+    
+    res.json({ status: true, message: 'Department deleted successfully' });
+  } catch (error) {
+    console.error('Delete department error:', error);
+    await logActivity(activityLogService, {
+      userId: req.user?.userId || null,
+      action: 'delete',
+      module: 'departments',
+      entity: 'Department',
+      entityId: req.params.id,
+      description: 'Failed to delete department',
+      req,
+      status: 'failure',
+      errorMessage: error.message,
+    });
+    res.status(500).json({ status: false, message: 'Failed to delete department' });
+  }
 };
 
 export const updateDepartmentsBulk = async (req, res) => {
