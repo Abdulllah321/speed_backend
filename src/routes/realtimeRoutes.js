@@ -18,3 +18,4 @@ router.get('/api/realtime/activity-logs', authenticate, (req, res) => {
 
 export default router;
 
+
