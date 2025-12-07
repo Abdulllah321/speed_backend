@@ -2,6 +2,8 @@
 
 model Employee {
   id                        String    @id @default(uuid())
+  userId                    String?   @unique
+  user                      User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   employeeId                String    @unique
   employeeName              String
   fatherHusbandName         String

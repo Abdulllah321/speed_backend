@@ -19,6 +19,7 @@ import employeeStatusRoutes from "./employeeStatusRoutes.js";
 import employeeRoutes from "./employeeRoutes.js";
 import providentFundRoutes from "./providentFundRoutes.js";
 import workingHoursPolicyRoutes from "./workingHoursPolicyRoutes.js";
+import uploadRoutes from "./uploadRoutes.js";
 import realtimeRoutes from "./realtimeRoutes.js";
 const router = express.Router();
 
@@ -44,4 +45,5 @@ router.use("/api", employeeStatusRoutes);
 router.use("/api", employeeRoutes);
 router.use("/api", providentFundRoutes);
 router.use("/api", workingHoursPolicyRoutes);
+router.use("/api", uploadRoutes);
 export default router;

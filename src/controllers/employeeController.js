@@ -1,6 +1,27 @@
 import prisma from '@/models/database.js';
 import activityLogService from '@/services/activityLogService.js';
 import { logActivity } from '@/util/activityLogHelper.js';
+import bcrypt from 'bcrypt';
+
+export const validateEmployeePayload = (body) => {
+  const errors = [];
+  const required = ['employeeId', 'employeeName', 'officialEmail', 'joiningDate', 'dateOfBirth', 'department', 'employeeGrade', 'designation', 'employmentStatus', 'reportingManager', 'workingHoursPolicy', 'branch', 'country', 'state', 'city', 'employeeSalary'];
+  for (const key of required) {
+    if (!body[key] || (typeof body[key] === 'string' && !body[key].trim())) errors.push(`${key} is required`);
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (body.officialEmail && !emailRegex.test(body.officialEmail)) errors.push('officialEmail is invalid');
+  const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
+  if (body.cnicNumber && !cnicRegex.test(body.cnicNumber)) errors.push('cnicNumber must be XXXXX-XXXXXXX-X');
+  if (body.employeeSalary && isNaN(Number(body.employeeSalary))) errors.push('employeeSalary must be numeric');
+  return { valid: errors.length === 0, errors };
+};
+
+const hashPasswordIfProvided = async (password) => {
+  if (!password || !password.trim()) return null;
+  const saltRounds = 12;
+  return bcrypt.hash(password.trim(), saltRounds);
+};
 
 // Get all employees
 export const getAllEmployees = async (req, res) => {
@@ -160,9 +181,9 @@ export const createEmployee = async (req, res) => {
       roles,
     } = req.body;
 
-    // Validation
-    if (!employeeId || !employeeName || !officialEmail) {
-      return res.status(400).json({ status: false, message: 'Employee ID, Name, and Official Email are required' });
+    const { valid, errors } = validateEmployeePayload(req.body);
+    if (!valid) {
+      return res.status(400).json({ status: false, message: errors.join(', ') });
     }
 
     // Check for duplicate employeeId
@@ -222,62 +243,98 @@ export const createEmployee = async (req, res) => {
       }
     }
 
-    // Create employee
-    const employee = await prisma.employee.create({
-      data: {
-        employeeId: employeeId.trim(),
-        employeeName: employeeName.trim(),
-        fatherHusbandName: fatherHusbandName?.trim() || '',
-        department: department?.trim() || '',
-        subDepartment: subDepartment?.trim() || null,
-        employeeGrade: employeeGrade?.trim() || '',
-        attendanceId: attendanceId?.trim() || '',
-        designation: designation?.trim() || '',
-        maritalStatus: maritalStatus?.trim() || '',
-        employmentStatus: employmentStatus?.trim() || '',
-        probationExpiryDate: probationExpiryDate ? new Date(probationExpiryDate) : null,
-        cnicNumber: cnicNumber?.replace(/-/g, '') || '', // Remove dashes from CNIC
-        cnicExpiryDate: cnicExpiryDate ? new Date(cnicExpiryDate) : null,
-        lifetimeCnic: lifetimeCnic || false,
-        joiningDate: new Date(joiningDate),
-        dateOfBirth: new Date(dateOfBirth),
-        nationality: nationality?.trim() || '',
-        gender: gender?.trim() || '',
-        contactNumber: contactNumber?.trim() || '',
-        emergencyContactNumber: emergencyContactNumber?.trim() || null,
-        emergencyContactPerson: emergencyContactPersonName?.trim() || null,
-        personalEmail: personalEmail?.trim() || null,
-        officialEmail: officialEmail.trim(),
-        country: country?.trim() || 'Pakistan',
-        province: state?.trim() || '', // Map state to province
-        city: city?.trim() || '',
-        employeeSalary: employeeSalary ? parseFloat(employeeSalary) : 0,
-        eobi: eobi || false,
-        eobiNumber: eobiNumber?.trim() || null,
-        providentFund: providentFund || false,
-        overtimeApplicable: overtimeApplicable || false,
-        daysOff: daysOff?.trim() || null,
-        reportingManager: reportingManager?.trim() || '',
-        workingHoursPolicy: workingHoursPolicy?.trim() || '',
-        branch: branch?.trim() || '',
-        leavesPolicy: leavesPolicy?.trim() || '',
-        allowRemoteAttendance: allowRemoteAttendance || false,
-        currentAddress: currentAddress?.trim() || null,
-        permanentAddress: permanentAddress?.trim() || null,
-        bankName: bankName?.trim() || '',
-        accountNumber: accountNumber?.trim() || '',
-        accountTitle: accountTitle?.trim() || '',
-        laptop: equipmentMap.laptop,
-        card: equipmentMap.card,
-        mobileSim: equipmentMap.mobileSim,
-        key: equipmentMap.key,
-        tools: equipmentMap.tools,
-        accountType: accountType?.trim() || null,
-        password: password?.trim() || null, // Note: In production, hash this password
-        roles: roles?.trim() || null,
-        status: 'active',
-      },
+    const txResult = await prisma.$transaction(async (tx) => {
+      const existingUser = await tx.user.findUnique({ where: { email: officialEmail } });
+      if (existingUser) return { error: { code: 409, message: 'User with this email already exists' } };
+
+      const hashed = await hashPasswordIfProvided(password);
+      const generateIfMissing = !hashed;
+      const tempPassword = generateIfMissing ? Math.random().toString(36).slice(2) + 'A1!' : null;
+      const finalHash = hashed || await bcrypt.hash(tempPassword, 12);
+
+      const nameParts = employeeName.trim().split(' ');
+      const firstName = nameParts.shift() || employeeName.trim();
+      const lastName = nameParts.join(' ') || '-';
+
+      const user = await tx.user.create({
+        data: {
+          email: officialEmail.trim(),
+          password: finalHash,
+          firstName,
+          lastName,
+          phone: contactNumber?.trim() || null,
+          avatar: null,
+          employeeId: employeeId.trim(),
+          mustChangePassword: generateIfMissing ? true : false,
+          status: 'active',
+        },
+      });
+
+      const employee = await tx.employee.create({
+        data: {
+          userId: user.id,
+          employeeId: employeeId.trim(),
+          employeeName: employeeName.trim(),
+          fatherHusbandName: fatherHusbandName?.trim() || '',
+          department: department?.trim() || '',
+          subDepartment: subDepartment?.trim() || null,
+          employeeGrade: employeeGrade?.trim() || '',
+          attendanceId: attendanceId?.trim() || '',
+          designation: designation?.trim() || '',
+          maritalStatus: maritalStatus?.trim() || '',
+          employmentStatus: employmentStatus?.trim() || '',
+          probationExpiryDate: probationExpiryDate ? new Date(probationExpiryDate) : null,
+          cnicNumber: cnicNumber?.replace(/-/g, '') || '',
+          cnicExpiryDate: cnicExpiryDate ? new Date(cnicExpiryDate) : null,
+          lifetimeCnic: lifetimeCnic || false,
+          joiningDate: new Date(joiningDate),
+          dateOfBirth: new Date(dateOfBirth),
+          nationality: nationality?.trim() || '',
+          gender: gender?.trim() || '',
+          contactNumber: contactNumber?.trim() || '',
+          emergencyContactNumber: emergencyContactNumber?.trim() || null,
+          emergencyContactPerson: emergencyContactPersonName?.trim() || null,
+          personalEmail: personalEmail?.trim() || null,
+          officialEmail: officialEmail.trim(),
+          country: country?.trim() || 'Pakistan',
+          province: state?.trim() || '', // Map state to province
+          city: city?.trim() || '',
+          employeeSalary: employeeSalary ? parseFloat(employeeSalary) : 0,
+          eobi: eobi || false,
+          eobiNumber: eobiNumber?.trim() || null,
+          providentFund: providentFund || false,
+          overtimeApplicable: overtimeApplicable || false,
+          daysOff: daysOff?.trim() || null,
+          reportingManager: reportingManager?.trim() || '',
+          workingHoursPolicy: workingHoursPolicy?.trim() || '',
+          branch: branch?.trim() || '',
+          leavesPolicy: leavesPolicy?.trim() || '',
+          allowRemoteAttendance: allowRemoteAttendance || false,
+          currentAddress: currentAddress?.trim() || null,
+          permanentAddress: permanentAddress?.trim() || null,
+          bankName: bankName?.trim() || '',
+          accountNumber: accountNumber?.trim() || '',
+          accountTitle: accountTitle?.trim() || '',
+          laptop: equipmentMap.laptop,
+          card: equipmentMap.card,
+          mobileSim: equipmentMap.mobileSim,
+          key: equipmentMap.key,
+          tools: equipmentMap.tools,
+          accountType: accountType?.trim() || null,
+          password: null,
+          roles: roles?.trim() || null,
+          status: 'active',
+        },
+      });
+
+      return { employee, user, tempPassword };
     });
+
+    if (txResult?.error) {
+      return res.status(txResult.error.code).json({ status: false, message: txResult.error.message });
+    }
+
+    const { employee, user, tempPassword } = txResult;
 
     await logActivity(activityLogService, {
       userId: req.user?.userId || null,
@@ -290,7 +347,7 @@ export const createEmployee = async (req, res) => {
       req,
     });
 
-    res.status(201).json({ status: true, data: employee, message: 'Employee created successfully' });
+    res.status(201).json({ status: true, data: { employee, user }, message: 'Employee created successfully', tempPassword: tempPassword ? 'Set by system, must change on first login' : undefined });
   } catch (error) {
     console.error('Error creating employee:', error);
     await logActivity(activityLogService, {
@@ -459,4 +516,3 @@ export const deleteEmployee = async (req, res) => {
     res.status(500).json({ status: false, message: error.message || 'Failed to delete employee' });
   }
 };
-

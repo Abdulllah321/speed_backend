@@ -4,8 +4,8 @@
     "version": "1.0.0",
     "description": "speed_limit_backend is the ultimate backend solution",
     "main": "src/server.js",
-    "scripts": {
-        "dev": "nodemon --import ./register.js src/server.js --watch",
+  "scripts": {
+    "dev": "nodemon --import ./register.js src/server.js --watch",
         "setup": "bun install && bun update",
         "start": "node --import ./register.js src/server.js",
         "prisma:generate": "prisma generate",
@@ -13,15 +13,16 @@
         "prisma:studio": "prisma studio",
         "prisma:push": "prisma db push",
         "prisma:seed": "prisma db seed",
-        "prisma:deploy": "prisma generate && prisma migrate dev && prisma db push"
-    },
+    "prisma:deploy": "prisma generate && prisma migrate dev && prisma db push",
+    "test": "node --test"
+  },
     "keywords": [
         "express",
         "backend",
         "speed_limit_backend"
     ],
     "license": "UNLICENSED",
-    "dependencies": {
+  "dependencies": {
         "@prisma/adapter-pg": "^7.0.1",
         "@prisma/client": "7",
         "@types/cors": "^2.8.19",
@@ -45,8 +46,10 @@
         "pg": "^8.16.3",
         "qrcode": "^1.5.4",
         "rotating-file-stream": "^1.4.6",
-        "speakeasy": "^2.0.0"
-    },
+        "speakeasy": "^2.0.0",
+        "multer": "^2.0.0",
+        "sharp": "^0.33.4"
+  },
     "devDependencies": {
         "@types/node": "^24.10.1",
         "prisma": "7"

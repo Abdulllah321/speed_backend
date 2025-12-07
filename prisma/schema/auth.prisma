@@ -9,7 +9,7 @@ model User {
   phone                 String?
   avatar                String?
   employeeId            String?        @unique
-  status                String         @default("active") // active, inactive, suspended
+  status                String         @default("active")
   failedLoginAttempts   Int            @default(0)
   lockedUntil           DateTime?
   lastLoginAt           DateTime?
@@ -26,6 +26,7 @@ model User {
   refreshTokens         RefreshToken[]
   activityLogs          ActivityLog[]
   loginHistory          LoginHistory[]
+  employee              Employee?
 
   // CreatedBy relations for master data
   designationsCreated      Designation[]      @relation("DesignationCreatedBy")
@@ -54,6 +55,7 @@ model User {
   employeeStatusesCreated  EmployeeStatus[]   @relation("EmployeeStatusCreatedBy")
   providentFundsCreated    ProvidentFund[]    @relation("ProvidentFundCreatedBy")
   workingHoursPoliciesCreated WorkingHoursPolicy[] @relation("WorkingHoursPolicyCreatedBy")
+  fileUploadsCreated          FileUpload[]         @relation("FileUploadCreatedBy")
 }
 
 model Role {

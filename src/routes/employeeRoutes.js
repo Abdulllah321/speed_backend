@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate } from '@/middleware/authMiddleware.js';
+import { strictLimiter, apiLimiter } from '@/middleware/rateLimiter.js';
 import {
   getAllEmployees,
   getEmployeeById,
@@ -12,11 +13,11 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/employees', getAllEmployees);
+router.get('/employees', apiLimiter, getAllEmployees);
 router.get('/employees/:id', getEmployeeById);
-router.post('/employees', createEmployee);
-router.put('/employees/:id', updateEmployee);
-router.delete('/employees/:id', deleteEmployee);
+router.post('/employees', strictLimiter, createEmployee);
+router.put('/employees/:id', apiLimiter, updateEmployee);
+router.delete('/employees/:id', strictLimiter, deleteEmployee);
 
 export default router;
 
