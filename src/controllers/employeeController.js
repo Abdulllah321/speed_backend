@@ -183,6 +183,7 @@ export const createEmployee = async (req, res) => {
 
     const { valid, errors } = validateEmployeePayload(req.body);
     if (!valid) {
+      console.log('Employee validation failed:', { errors, receivedFields: Object.keys(req.body) });
       return res.status(400).json({ status: false, message: errors.join(', ') });
     }
 

@@ -27,8 +27,8 @@ export const apiLimiter = rateLimit({
 
 // Strict limiter for sensitive operations
 export const strictLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Allow more attempts during development
   message: {
     status: false,
     message: 'Too many attempts. Please try again later.',

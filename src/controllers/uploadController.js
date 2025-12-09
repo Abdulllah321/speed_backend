@@ -26,24 +26,44 @@ export const uploadSingle = [
       }
 
       const fullPath = path.join(uploadRoot, file.filename);
-      if (file.mimetype.startsWith('image/')) {
-        try {
-          const buf = await sharp(fullPath)
-            .rotate()
-            .jpeg({ quality: 85 })
-            .toBuffer();
-          fs.writeFileSync(fullPath, buf);
-        } catch (e) {
-          console.warn('Image post-process failed:', e);
-        }
-      }
+      // if (file.mimetype.startsWith('image/')) {
+      //   try {
+      //     const buf = await sharp(fullPath)
+      //       .rotate()
+      //       .jpeg({ quality: 85 })
+      //       .toBuffer();
+      //     fs.writeFileSync(fullPath, buf);
+      //   } catch (e) {
+      //     console.warn('Image post-process failed:', e);
+      //   }
+      // }
+
+          let storedPath = path.join('uploads', file.filename);
+          let storedMimetype = file.mimetype;
+          let storedSize = file.size;
+          if (file.mimetype.startsWith('image/')) {
+  try {
+    const processedName = (/\.[^.]+$/.test(file.filename) ? file.filename.replace(/\.[^.]+$/, '.jpg') : `${file.filename}.jpg`);
+    const processedPath = path.join(uploadRoot, processedName);
+    const info = await sharp(fullPath)
+      .rotate()
+      .jpeg({ quality: 85 })
+      .toFile(processedPath);
+    try { fs.unlinkSync(fullPath); } catch {}
+    storedPath = path.join('uploads', processedName);
+    storedMimetype = 'image/jpeg';
+    if (info && typeof info.size === 'number') storedSize = info.size;
+  } catch (e) {
+    console.warn('Image post-process failed:', e);
+  }
+}
 
       const record = await prisma.fileUpload.create({
         data: {
           filename: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-          path: path.join('uploads', file.filename),
+          mimetype: storedMimetype,
+          size: storedSize,
+          path: storedPath,
           createdById: req.user?.userId || null,
         },
       });
