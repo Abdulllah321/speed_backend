@@ -21,6 +21,7 @@ import providentFundRoutes from "./providentFundRoutes.js";
 import workingHoursPolicyRoutes from "./workingHoursPolicyRoutes.js";
 import uploadRoutes from "./uploadRoutes.js";
 import realtimeRoutes from "./realtimeRoutes.js";
+import exitClearanceRoutes from "./exitClearanceRoutes.js";
 const router = express.Router();
 
 // API routes
@@ -46,4 +47,5 @@ router.use("/api", employeeRoutes);
 router.use("/api", providentFundRoutes);
 router.use("/api", workingHoursPolicyRoutes);
 router.use("/api", uploadRoutes);
+router.use("/api", exitClearanceRoutes);
 export default router;

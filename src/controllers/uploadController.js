@@ -38,21 +38,12 @@ export const uploadSingle = [
       //   }
       // }
 
-          let storedPath = path.join('uploads', file.filename);
-          let storedMimetype = file.mimetype;
-          let storedSize = file.size;
           if (file.mimetype.startsWith('image/')) {
   try {
-    const processedName = (/\.[^.]+$/.test(file.filename) ? file.filename.replace(/\.[^.]+$/, '.jpg') : `${file.filename}.jpg`);
-    const processedPath = path.join(uploadRoot, processedName);
-    const info = await sharp(fullPath)
+    await sharp(fullPath)
       .rotate()
       .jpeg({ quality: 85 })
-      .toFile(processedPath);
-    try { fs.unlinkSync(fullPath); } catch {}
-    storedPath = path.join('uploads', processedName);
-    storedMimetype = 'image/jpeg';
-    if (info && typeof info.size === 'number') storedSize = info.size;
+      .toFile(fullPath); // overwrite safely
   } catch (e) {
     console.warn('Image post-process failed:', e);
   }
@@ -61,9 +52,9 @@ export const uploadSingle = [
       const record = await prisma.fileUpload.create({
         data: {
           filename: file.originalname,
-          mimetype: storedMimetype,
-          size: storedSize,
-          path: storedPath,
+          mimetype: file.mimetype,
+          size: file.size,
+          path: path.join('uploads', file.filename),
           createdById: req.user?.userId || null,
         },
       });

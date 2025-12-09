@@ -2,6 +2,10 @@ import prisma from '@/models/database.js';
 import activityLogService from '@/services/activityLogService.js';
 import { logActivity } from '@/util/activityLogHelper.js';
 import bcrypt from 'bcrypt';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import XLSX from 'xlsx';
 
 export const validateEmployeePayload = (body) => {
   const errors = [];
@@ -22,6 +26,42 @@ const hashPasswordIfProvided = async (password) => {
   const saltRounds = 12;
   return bcrypt.hash(password.trim(), saltRounds);
 };
+
+// CSV import storage (public/csv)
+const csvRoot = path.join(process.cwd(), 'public', 'csv');
+if (!fs.existsSync(csvRoot)) {
+  fs.mkdirSync(csvRoot, { recursive: true });
+}
+
+const csvStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, csvRoot),
+  filename: (_req, file, cb) => {
+    const ts = Date.now();
+    const safe = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    cb(null, `${ts}_${safe}`);
+  },
+});
+
+const csvUploadMiddleware = multer({
+  storage: csvStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const lower = file.originalname.toLowerCase();
+    const isCsv =
+      file.mimetype === 'text/csv' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      lower.endsWith('.csv');
+    const isExcel =
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      lower.endsWith('.xlsx') ||
+      lower.endsWith('.xls');
+    if (!isCsv && !isExcel) {
+      return cb(new Error('Only CSV or Excel (xlsx/xls) files are allowed'));
+    }
+    cb(null, true);
+  },
+}).single('file');
 
 // Get all employees
 export const getAllEmployees = async (req, res) => {
@@ -517,3 +557,241 @@ export const deleteEmployee = async (req, res) => {
     res.status(500).json({ status: false, message: error.message || 'Failed to delete employee' });
   }
 };
+
+// Import employees from CSV: saves to public/csv and returns parsed rows
+export const importEmployeesCsv = [
+  (req, res, next) => {
+    csvUploadMiddleware(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ status: false, message: err.message || 'Failed to upload CSV' });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ status: false, message: 'No CSV file provided' });
+      }
+
+      const fullPath = path.join(csvRoot, file.filename);
+      const lower = file.originalname.toLowerCase();
+      let headers = [];
+      let rows = [];
+
+      const isExcel =
+        file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.mimetype === 'application/vnd.ms-excel' ||
+        lower.endsWith('.xlsx') ||
+        lower.endsWith('.xls');
+
+      const buildObjects = (matrix) => {
+        const headerRow = matrix[0] || [];
+        const dataRows = matrix.slice(1);
+        const keep = headerRow.map((h, idx) => {
+          const name = (h ?? '').toString().trim();
+          if (name) return true;
+          return dataRows.some((r) => {
+            const v = r[idx];
+            return v !== undefined && v !== null && String(v).trim() !== '';
+          });
+        });
+
+        const filteredHeaders = [];
+        const filteredRows = dataRows.map(() => ({}));
+
+        keep.forEach((shouldKeep, idx) => {
+          if (!shouldKeep) return;
+          const headerName = (headerRow[idx] ?? '').toString().trim() || `Column_${idx + 1}`;
+          filteredHeaders.push(headerName);
+          dataRows.forEach((row, rowIdx) => {
+            const v = row[idx];
+            filteredRows[rowIdx][headerName] =
+              v !== undefined && v !== null ? String(v).trim() : '';
+          });
+        });
+
+        const nonEmptyRows = filteredRows.filter((row) =>
+          Object.values(row).some((v) => v !== '')
+        );
+
+        return { filteredHeaders, filteredRows: nonEmptyRows };
+      };
+
+      if (isExcel) {
+        const workbook = XLSX.readFile(fullPath);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        const { filteredHeaders, filteredRows } = buildObjects(matrix);
+        headers = filteredHeaders;
+        rows = filteredRows;
+      } else {
+        const raw = fs.readFileSync(fullPath, 'utf8');
+        const matrix = raw
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter((l) => l !== '')
+          .map((line) => line.split(',').map((v) => v.trim()));
+
+        if (!matrix.length) {
+          return res.status(400).json({ status: false, message: 'CSV file is empty' });
+        }
+
+        const { filteredHeaders, filteredRows } = buildObjects(matrix);
+        headers = filteredHeaders;
+        rows = filteredRows;
+      }
+
+      const expectedHeaders = [
+        'Employee ID',
+        'Employee Name',
+        'Father / Husband Name',
+        'Department',
+        'Sub Department',
+        'Employee-Grade',
+        'Attendance-ID',
+        'Designation',
+        'Marital Status',
+        'Employment Status',
+        'CNIC-Number',
+        'Joining-Date',
+        'Nationality',
+        'Gender',
+        'Contact-Number',
+        'Offcial-Email',
+        'Country',
+        'State',
+        'City',
+        'Employee-Salary(Compensation)',
+        'Working-Hours-Policy',
+        'Branch',
+        'Leaves-Policy',
+        'Date of Birth',
+      ];
+
+      const missingHeaders = expectedHeaders.filter(
+        (h) => !headers.some((col) => col.toLowerCase() === h.toLowerCase())
+      );
+      if (missingHeaders.length) {
+        console.log("Missing Headers", missingHeaders)
+        console.log("Headers", headers)
+        return res.status(400).json({
+          status: false,
+          message: `Missing required columns: ${missingHeaders.join(', ')}`,
+        });
+      }
+
+      const headerMap = {};
+      expectedHeaders.forEach((h) => {
+        const found = headers.find((col) => col.toLowerCase() === h.toLowerCase());
+        if (found) headerMap[h] = found;
+      });
+
+      const placeholderDate = new Date('1970-01-01T00:00:00Z');
+      const sanitizeString = (val, fallback = 'N/A') => {
+        if (val === null || val === undefined) return fallback;
+        const t = String(val).trim();
+        return t || fallback;
+      };
+      const parseNumber = (val, fallback = '0') => {
+        const num = Number(String(val).replace(/,/g, '').trim());
+        if (Number.isFinite(num)) return num.toString();
+        return fallback;
+      };
+      const parseDate = (val) => {
+        if (!val) return placeholderDate;
+        const cleaned = String(val).replace(/(\d+)(st|nd|rd|th)/gi, '$1');
+        const d = new Date(cleaned);
+        if (isNaN(d.getTime())) return placeholderDate;
+        return d;
+      };
+
+      const buildEmail = (rowIdx, employeeId) => {
+        const baseId = sanitizeString(employeeId || `emp${rowIdx + 1}`, `emp${rowIdx + 1}`);
+        return `${baseId}@example.com`.replace(/[^a-zA-Z0-9@._-]/g, '');
+      };
+
+      const toRecord = (row, rowIdx) => {
+        const get = (label) => row[headerMap[label]];
+        const employeeId = sanitizeString(get('Employee ID'), `EMP-${Date.now()}-${rowIdx + 1}`);
+        const officialEmail =
+          sanitizeString(get('Offcial-Email'), '').includes('@') && sanitizeString(get('Offcial-Email'), '').length
+            ? sanitizeString(get('Offcial-Email'), '')
+            : buildEmail(rowIdx, employeeId);
+
+        const salary = parseNumber(get('Employee-Salary(Compensation)'), '0');
+
+        return {
+          employeeId,
+          employeeName: sanitizeString(get('Employee Name')),
+          fatherHusbandName: sanitizeString(get('Father / Husband Name')),
+          department: sanitizeString(get('Department')),
+          subDepartment: sanitizeString(get('Sub Department'), null),
+          employeeGrade: sanitizeString(get('Employee-Grade')),
+          attendanceId: sanitizeString(get('Attendance-ID')),
+          designation: sanitizeString(get('Designation')),
+          maritalStatus: sanitizeString(get('Marital Status')),
+          employmentStatus: sanitizeString(get('Employment Status')),
+          cnicNumber: sanitizeString(get('CNIC-Number')).replace(/[^0-9]/g, ''),
+          joiningDate: parseDate(get('Joining-Date')),
+          dateOfBirth: parseDate(get('Date of Birth')),
+          nationality: sanitizeString(get('Nationality')),
+          gender: sanitizeString(get('Gender')),
+          contactNumber: sanitizeString(get('Contact-Number')),
+          officialEmail,
+          country: sanitizeString(get('Country')),
+          province: sanitizeString(get('State')),
+          city: sanitizeString(get('City')),
+          employeeSalary: salary,
+          workingHoursPolicy: sanitizeString(get('Working-Hours-Policy')),
+          branch: sanitizeString(get('Branch')),
+          leavesPolicy: sanitizeString(get('Leaves-Policy')),
+          // placeholders for required fields not present in CSV
+          reportingManager: 'N/A',
+          bankName: 'N/A',
+          accountNumber: 'N/A',
+          accountTitle: 'N/A',
+          lifetimeCnic: false,
+          eobi: false,
+          providentFund: false,
+          overtimeApplicable: false,
+          allowRemoteAttendance: false,
+          status: 'active',
+        };
+      };
+
+      const payload = rows.map((row, idx) => toRecord(row, idx));
+      console.log("Payload", payload)
+      let inserted = 0;
+      if (payload.length) {
+        const result = await prisma.employee.createMany({
+          data: payload,
+          skipDuplicates: true,
+        });
+        inserted = result.count || 0;
+      }
+
+      try {
+        fs.unlinkSync(fullPath);
+      } catch {}
+
+      return res.status(201).json({
+        status: true,
+        data: {
+          filename: file.originalname,
+          storedFilename: file.filename,
+          path: path.join('csv', file.filename),
+          headers,
+          rows,
+          inserted,
+          total: payload.length,
+        },
+      });
+    } catch (error) {
+      console.error('Error importing employees CSV:', error);
+      res.status(500).json({ status: false, message: error.message || 'Failed to import CSV' });
+    }
+  },
+];

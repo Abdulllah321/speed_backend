@@ -7,6 +7,7 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  importEmployeesCsv,
 } from '@/controllers/employeeController.js';
 
 const router = express.Router();
@@ -18,6 +19,8 @@ router.get('/employees/:id', getEmployeeById);
 router.post('/employees', strictLimiter, createEmployee);
 router.put('/employees/:id', apiLimiter, updateEmployee);
 router.delete('/employees/:id', strictLimiter, deleteEmployee);
+router.post('/employees/import-csv', apiLimiter, ...importEmployeesCsv);
 
 export default router;
+
 
