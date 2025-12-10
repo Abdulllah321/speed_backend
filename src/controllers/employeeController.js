@@ -402,7 +402,7 @@ export const createEmployee = async (req, res) => {
       errorMessage: error.message,
     });
     if (error.code === 'P2002') {
-      const field = error.meta?.target?.[0];
+      const field = error.meta?.target?.[0] || 'field';
       return res.status(400).json({ 
         status: false, 
         message: `Employee with this ${field} already exists` 
